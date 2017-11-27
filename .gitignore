@@ -99,3 +99,9 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+phabricator/
+libphutil/
+arcanist/
+.fab_tasks~
+.env
