@@ -10,9 +10,9 @@ from fabtools import deb, require
 
 branch = 'stable'
 env.user = 'phacility'
-apache_mods = ["rewrite", "ssl"]
 hostname = environ["FABRICATOR_HOST"]
 env.hosts = [environ['FABRICATOR_IP'], ]
+apache_mods = ["rewrite", "ssl", "php7.0"]
 db_root_pass = environ['FABRICATOR_DB_ROOT_PASS']
 db_user_pass = environ['FABRICATOR_DB_USER_PASS']
 repo_names = ["phabricator", "libphutil", "arcanist"]
@@ -113,14 +113,21 @@ def grant_all(name, host='localhost', **kwargs):
 def setup():
     local_clone_repos()
     require.files.directories([apps_dir, logs_dir])
+    require.files.directories(["/var/repo/"], use_sudo=True)
+    require.deb.package("software-properties-common")
+    sudo("add-apt-repository ppa:ondrej/php")
+    sudo("add-apt-repository ppa:ondrej/apache2")
+    sudo("add-apt-repository ppa:certbot/certbot")
     deb.update_index()
     deb.upgrade()
     require.git.command()
     require.deb.packages([
-        "mysql-server", "dpkg-dev", "php7.0", "php7.0-mysql", "php7.0-gd",
-        "php7.0-dev", "php7.0-curl", "php7.0-cli", "php7.0-json", "php-apcu",
-        "libpcre3-dev", "php-pear"])
+        "mysql-server", "dpkg-dev", "php7.1", "php7.1-mysql", "php7.1-gd",
+        "php7.1-dev", "php7.1-curl", "php7.1-cli", "php7.1-json", "php-apcu",
+        "libpcre3-dev", "php-pear", "libapache2-mod-php7.1", "sendmail",
+        "php7.1-mbstring", "python-pip", "python-certbot-apache"])
     sudo("yes '' | pecl install apc")
+    sudo("pip install pygments")
     require.apache.server()
     for apache_mod in apache_mods:
         require.apache.module_enabled(apache_mod)
@@ -134,15 +141,30 @@ def setup():
     )
     require.apache.site_enabled(hostname)
     require.apache.site_disabled('default')
+    print("Please make sure %s is pointing to %s before certbot install" % (
+        hostname, env.hosts))
+    sudo("certbot --apache")
     require.mysql.server(password=db_root_pass)
     with settings(mysql_user='root', mysql_password=db_root_pass):
         require.mysql.user(env.user, db_user_pass)
         grant_all(env.user)
+    require.file(
+        "/etc/mysql/conf.d/mysql.cnf",
+        "[mysqld]\nsql_mode=STRICT_ALL_TABLES", use_sudo=True)
+    sudo("service mysql restart")
     require.nodejs.installed_from_source(version='8.9.1')
     with cd("%s/phabricator" % apps_dir):
         run("./bin/config set mysql.host localhost")
         run("./bin/config set mysql.user %s" % env.user)
         run("./bin/config set mysql.pass %s" % db_user_pass)
+        run("./bin/config set phabricator.base-uri 'https://%s'" % hostname)
         run("./bin/storage upgrade --force")
+        run("./bin/phd start")
+        run("./bin/aphlict start")
+
+
+@task
+def quick():
+    with cd("%s/phabricator" % apps_dir):
         run("./bin/phd start")
         run("./bin/aphlict start")

@@ -9,12 +9,12 @@
             "os_name": "posix",
             "platform_machine": "x86_64",
             "platform_python_implementation": "CPython",
-            "platform_release": "17.2.0",
-            "platform_system": "Darwin",
-            "platform_version": "Darwin Kernel Version 17.2.0: Fri Sep 29 18:27:05 PDT 2017; root:xnu-4570.20.62~3/RELEASE_X86_64",
+            "platform_release": "4.9.0-4-amd64",
+            "platform_system": "Linux",
+            "platform_version": "#1 SMP Debian 4.9.51-1 (2017-09-28)",
             "python_full_version": "2.7.14",
             "python_version": "2.7",
-            "sys_platform": "darwin"
+            "sys_platform": "linux2"
         },
         "pipfile-spec": 6,
         "requires": {
